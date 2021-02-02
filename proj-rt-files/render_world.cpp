@@ -33,7 +33,7 @@ Hit Render_World::Closest_Intersection(const Ray &ray)
     for (unsigned i = 0; i < objects.size(); i++)
     {
         Hit h = objects.at(i)->Intersection(ray, -1);
-        if (h.dist > small_t && h.dist < min_t)
+        if (h.object && h.dist > small_t && h.dist < min_t)
         {
             min = h;
             min_t = h.dist;

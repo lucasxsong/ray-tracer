@@ -15,22 +15,21 @@ Hit Sphere::Intersection(const Ray &ray, int part) const
     if (dt < 0)
     {
         // case where no intersection
-        return {NULL, 0, part};
+        return {NULL, 0, -1};
     }
 
     // need to find t from t_1 and t_2
     double t1 = (-b + sqrt(dt)) / (2 * a);
-    if (t1 > 0)
-    {
-        return {this, t1, part};
-    }
     double t2 = (-b - sqrt(dt)) / (2 * a);
-    if (t2 > 0)
+    if (t1 < t2 && t1 >= small_t)
     {
         return {this, t1, part};
     }
-
-    return {NULL, 0, part};
+    else if (t2 <= t1 && t2 >= small_t)
+    {
+        return {this, t2, part};
+    }
+    return {NULL, 0, -1};
 }
 
 vec3 Sphere::Normal(const vec3 &point, int part) const
