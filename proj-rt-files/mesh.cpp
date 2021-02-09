@@ -9,10 +9,10 @@ static const double weight_tolerance = 1e-4;
 
 // Read in a mesh from an obj file.  Populates the bounding box and registers
 // one part per triangle (by setting number_parts).
-void Mesh::Read_Obj(const char* file)
+void Mesh::Read_Obj(const char *file)
 {
     std::ifstream fin(file);
-    if(!fin)
+    if (!fin)
     {
         exit(EXIT_FAILURE);
     }
@@ -20,38 +20,59 @@ void Mesh::Read_Obj(const char* file)
     ivec3 e;
     vec3 v;
     box.Make_Empty();
-    while(fin)
+    while (fin)
     {
-        getline(fin,line);
+        getline(fin, line);
 
-        if(sscanf(line.c_str(), "v %lg %lg %lg", &v[0], &v[1], &v[2]) == 3)
+        if (sscanf(line.c_str(), "v %lg %lg %lg", &v[0], &v[1], &v[2]) == 3)
         {
             vertices.push_back(v);
             box.Include_Point(v);
         }
 
-        if(sscanf(line.c_str(), "f %d %d %d", &e[0], &e[1], &e[2]) == 3)
+        if (sscanf(line.c_str(), "f %d %d %d", &e[0], &e[1], &e[2]) == 3)
         {
-            for(int i=0;i<3;i++) e[i]--;
+            for (int i = 0; i < 3; i++)
+                e[i]--;
             triangles.push_back(e);
         }
     }
-    number_parts=triangles.size();
+    number_parts = triangles.size();
 }
 
 // Check for an intersection against the ray.  See the base class for details.
-Hit Mesh::Intersection(const Ray& ray, int part) const
+Hit Mesh::Intersection(const Ray &ray, int part) const
 {
-    TODO;
-    return {};
+    double k;
+
+    for (unsigned i = 0; i < triangles.size(); ++i)
+    {
+        if (Intersect_Triangle(ray, i, k))
+        {
+            if (part >= 0)
+            {
+                return {this, k, part};
+            }
+            else
+            {
+                return { this, k, int(i) };
+            }
+        }
+    }
+
+    return {NULL, 0, 0};
 }
 
 // Compute the normal direction for the triangle with index part.
-vec3 Mesh::Normal(const vec3& point, int part) const
+vec3 Mesh::Normal(const vec3 &point, int part) const
 {
-    assert(part>=0);
-    TODO;
-    return vec3();
+    assert(part >= 0);
+
+    vec3 a = vertices[triangles[part][0]];
+    vec3 b = vertices[triangles[part][1]];
+    vec3 c = vertices[triangles[part][2]];
+
+    return cross(b - a, c - a).normalized();
 }
 
 // This is a helper routine whose purpose is to simplify the implementation
@@ -66,9 +87,36 @@ vec3 Mesh::Normal(const vec3& point, int part) const
 // larger than -weight_tolerance.  The use of small_t avoid the self-shadowing
 // bug, and the use of weight_tolerance prevents rays from passing in between
 // two triangles.
-bool Mesh::Intersect_Triangle(const Ray& ray, int tri, double& dist) const
+bool Mesh::Intersect_Triangle(const Ray &ray, int tri, double &dist) const
 {
-    TODO;
+    vec3 zero_vec(0, 0, 0);
+    vec3 normal = Normal(zero_vec, tri);
+
+    if (!dot(ray.direction, normal))
+    {
+        return false;
+    }
+
+    vec3 a = vertices[triangles[tri][0]];
+    vec3 b = vertices[triangles[tri][1]];
+    vec3 c = vertices[triangles[tri][2]];
+
+    vec3 uv = cross(ray.direction, b - a);
+
+    double gamma = dot(uv, ray.endpoint - a) / dot(uv, c - a);
+
+    vec3 uw = cross(ray.direction, c - a);
+
+    double beta = dot(uw, ray.endpoint - a) / dot(uw, b - a);
+
+    vec3 vw = cross(b - a, c - a);
+    dist = -dot(vw, ray.endpoint - a) / dot(vw, ray.direction);
+
+    if (dist > -small_t && 1 - beta - gamma > -weight_tol && beta > -weight_tol && gamma > -weight_tol)
+    {
+        return true;
+    }
+
     return false;
 }
 
